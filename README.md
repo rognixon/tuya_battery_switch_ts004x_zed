@@ -133,16 +133,18 @@ Download the **`ts0046-ihseno-6key-v04`** artifact from the **Actions** tab afte
 
 1. **Initial Flash (CP2102 USB-to-TTL via Web Flasher):**
    * Remove the battery from the switch and wire your **CP2102** adapter to the ZT3L module pads:
-     * `3V3` -> `3V3` (Pin 8)
+     * `3V3` -> `3V3` (Pin 8) ideally via a switch so it can be booted during activation
      * `GND` -> `GND` (Pin 9)
      * `TXD` -> `SWS` (bottom edge pad)
    * Open [pvvx's TLSR825x USB-COM Flash Writer](https://github.io) in a WebSerial-capable browser (Chrome/Edge).
-   * Click **Open**, select your CP2102 COM port, select the compiled `bin/tuya_battery_switch_ts004x_zed_model_6_V*.bin` file, and click **Write to Flash** (toggle `3V3` power if needed during activation so the chip enters SWS mode).
+   * Click **Open**, select your CP2102 COM port, select the compiled `bin/tuya_battery_switch_ts004x_zed_model_6_V*.bin` file, set baud as 115200 and activation time of 1 second.  Click **Write to Flash** (toggle/switch-on `3V3` power during the 1sec activation so the chip enters SWS mode).
    * *(Future firmware updates can be pushed wirelessly via Zigbee2MQTT OTA using the `.zigbee` file.)*
 2. **Pairing:** Press any button **5 times quickly**, then **press and hold on the 6th press for ~2 seconds** until the LEDs flash steadily to join Zigbee2MQTT (recognized as **`TS0046-z-SlD`**).
 3. **Configure Button Actions:**
    * Press any button **4 times quickly** to wake the sleepy device for 20 seconds.
    * In Z2M **Exposes**, set **`Switch type`** on Endpoints `1`–`6` to **`multifunction`** (enables `single`, `double`, `triple`, `hold`, and `release`).
+
+<img width="627" height="354" alt="image" src="https://github.com/user-attachments/assets/519bbc86-dac4-44ca-9c3a-b21d91ffd167" />
 
 
 
