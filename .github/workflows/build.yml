@@ -8,20 +8,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/telink-semi/telink-dev-tc32:latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install Telink TC32 toolchain
-        run: |
-          mkdir -p out
-          wget -q https://github.com
-          sudo tar -xjf tc32_gcc_v2.0.tar.bz2 -C /opt/
-
       - name: Compile Model 6 firmware
         run: |
+          mkdir -p out
           make clean
           make PROJECT_MODEL=_model_6 DEBUG="-DUART_PRINTF_MODE=OFF"
 
