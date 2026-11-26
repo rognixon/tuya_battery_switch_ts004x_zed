@@ -1,0 +1,37 @@
+name: Build Telink Zigbee Firmware
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies and Telink TC32 toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make python3 wget bzip2
+          HOST="shyboy.oss-cn-shenzhen"
+          FILE="readonly/tc32_gcc_v2.0.tar.bz2"
+          wget -q "https://${HOST}://{FILE}"
+          sudo tar -xjf tc32_gcc_v2.0.tar.bz2 -C /opt/
+
+      - name: Compile firmware
+        env:
+          PATH: "/opt/tc32/bin:${{ env.PATH }}"
+        run: |
+          make clean
+          make
+
+      - name: Upload compiled firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-ts0046-firmware
+          path: |
+            **/*.bin
+            **/*.zigbee
