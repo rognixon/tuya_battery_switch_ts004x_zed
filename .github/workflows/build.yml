@@ -1,4 +1,4 @@
-name: Build Telink Zigbee Firmware
+name: Build TS0046 Custom Firmware
 
 on:
   workflow_dispatch:
@@ -21,17 +21,15 @@ jobs:
           wget -q "https://${HOST}://{FILE}"
           sudo tar -xjf tc32_gcc_v2.0.tar.bz2 -C /opt/
 
-      - name: Compile firmware
-        env:
-          PATH: "/opt/tc32/bin:${{ env.PATH }}"
+      - name: Compile Model 6 firmware
         run: |
           make clean
-          make
+          make PROJECT_MODEL=_model_6 DEBUG="-DUART_PRINTF_MODE=OFF"
 
       - name: Upload compiled firmware
         uses: actions/upload-artifact@v4
         with:
-          name: custom-ts0046-firmware
+          name: ts0046-ihseno-6key-v04
           path: |
-            **/*.bin
-            **/*.zigbee
+            bin/*.bin
+            bin/*.zigbee
