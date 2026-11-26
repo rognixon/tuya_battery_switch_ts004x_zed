@@ -1,3 +1,151 @@
+## IHSENO 6-Button Scene Switch (`TS0046` / PCB `6KEY-V04` 2024.05.21)
+
+This variant uses a **Tuya ZT3L** (Telink TLSR8258) module with a different GPIO pinout than the standard `_TZ3000_iszegwpd` (`model_6`) build.
+
+### 1. Hardware GPIO Pinout (`ZT3L` Module)
+
+| Function | ZT3L Module Pad | Telink TLSR8258 GPIO | Notes |
+| :--- | :--- | :--- | :--- |
+| **Status LED** | `C4` (Pin 2) | `GPIO_PC4` | Active-High (drives transistor `Q1` for all 6 LEDs) |
+| **Button 1** | `B5` (Pin 14) | `GPIO_PB5` | Active-Low (`PM_PIN_PULLUP_1M`) |
+| **Button 2** | `A0` (Pin 12) | `GPIO_PA0` | Active-Low (`PM_PIN_PULLUP_1M`) |
+| **Button 3** | `C2` (Pin 7) | `GPIO_PC2` | Active-Low (`PM_PIN_PULLUP_1M`) |
+| **Button 4** | `D2` (Pin 5) | `GPIO_PD2` | Active-Low (`PM_PIN_PULLUP_1M`) |
+| **Button 5** | `C3` (Pin 6) | `GPIO_PC3` | Active-Low (`PM_PIN_PULLUP_1M`) |
+| **Button 6** | `D7` (Pin 4) | `GPIO_PD7` | Active-Low (`PM_PIN_PULLUP_1M`) |
+
+---
+
+### 2. Source Code Changes (`src/common/board_ts004x.h`)
+
+Update the LED and Button GPIO definitions in `src/common/board_ts004x.h` as follows (note that 6-button switches use `BUTTON4_6_GPIO` for Button 4, while `BUTTON4_GPIO` is moved to `GPIO_PB4` to avoid colliding with Button 5 on `GPIO_PC3`):
+
+```c
+/***************************** Configure LED  ***************************************/
+#define LED_ON                  1
+#define LED_OFF                 0
+#define LED1                    GPIO_PC4
+#define PC4_FUNC                AS_GPIO
+#define PC4_OUTPUT_ENABLE       ON
+#define PC4_INPUT_ENABLE        OFF
+#define PC4_DATA_OUT            LED_OFF
+
+/************************* Configure BUTTON GPIO ***************************************/
+#define MAX_BUTTON_NUM          6
+
+#define BUTTON1_GPIO            GPIO_PB5
+#define PB5_INPUT_ENABLE        ON
+#define PB5_OUTPUT_ENABLE       OFF
+#define PB5_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PB5     PM_PIN_PULLUP_1M
+
+#define BUTTON2_GPIO            GPIO_PA0
+#define PA0_INPUT_ENABLE        ON
+#define PA0_OUTPUT_ENABLE       OFF
+#define PA0_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PA0     PM_PIN_PULLUP_1M
+
+#define BUTTON3_GPIO            GPIO_PC2
+#define PC2_INPUT_ENABLE        ON
+#define PC2_OUTPUT_ENABLE       OFF
+#define PC2_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PC2     PM_PIN_PULLUP_1M
+
+/* Unused on 6-key model (moved to PB4 to avoid conflict with BUTTON5 on PC3) */
+#define BUTTON4_GPIO            GPIO_PB4
+#define PB4_INPUT_ENABLE        ON
+#define PB4_OUTPUT_ENABLE       OFF
+#define PB4_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PB4     PM_PIN_PULLUP_1M
+
+/* Key 4 (6-button model) */
+#define BUTTON4_6_GPIO          GPIO_PD2
+#define PD2_INPUT_ENABLE        ON
+#define PD2_OUTPUT_ENABLE       OFF
+#define PD2_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PD2     PM_PIN_PULLUP_1M
+
+/* Key 5 */
+#define BUTTON5_GPIO            GPIO_PC3
+#define PC3_INPUT_ENABLE        ON
+#define PC3_OUTPUT_ENABLE       OFF
+#define PC3_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PC3     PM_PIN_PULLUP_1M
+
+/* Key 6 */
+#define BUTTON6_GPIO            GPIO_PD7
+#define PD7_INPUT_ENABLE        ON
+#define PD7_OUTPUT_ENABLE       OFF
+#define PD7_FUNC                AS_GPIO
+#define PULL_WAKEUP_SRC_PD7     PM_PIN_PULLUP_1M
+```
+
+---
+
+### 3. Compiling via GitHub Actions (`.github/workflows/build.yml`)
+
+To compile automatically in the cloud using Telink's official TC32 container without installing a local toolchain, add `.github/workflows/build.yml`:
+
+```yaml
+name: Build TS0046 Custom Firmware
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/telink-semi/telink-dev-tc32:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Link Telink TC32 toolchain & compile Model 6
+        run: |
+          apt-get update && apt-get install -y python3
+          git config --global --add safe.directory "\$GITHUB_WORKSPACE"
+          GCC_PATH=\$(which tc32-elf-gcc || find / -name tc32-elf-gcc 2>/dev/null | head -n 1)
+          mkdir -p /opt/tc32
+          ln -sfn "(dirname "GCC_PATH")" /opt/tc32/bin
+          mkdir -p out
+          make clean
+          make PROJECT_MODEL=_model_6 DEBUG="-DUART_PRINTF_MODE=OFF"
+
+      - name: Upload compiled firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: ts0046-ihseno-6key-v04
+          path: |
+            bin/*.bin
+            bin/*.zigbee
+```
+
+Download the **`ts0046-ihseno-6key-v04`** artifact from the **Actions** tab after each build.
+
+---
+
+### 4. Flashing & Zigbee2MQTT Setup
+
+1. **Initial Flash (CP2102 USB-to-TTL via Web Flasher):**
+   * Remove the battery from the switch and wire your **CP2102** adapter to the ZT3L module pads:
+     * `3V3` -> `3V3` (Pin 8)
+     * `GND` -> `GND` (Pin 9)
+     * `TXD` -> `SWS` (bottom edge pad)
+   * Open [pvvx's TLSR825x USB-COM Flash Writer](https://github.io) in a WebSerial-capable browser (Chrome/Edge).
+   * Click **Open**, select your CP2102 COM port, select the compiled `bin/tuya_battery_switch_ts004x_zed_model_6_V*.bin` file, and click **Write to Flash** (toggle `3V3` power if needed during activation so the chip enters SWS mode).
+   * *(Future firmware updates can be pushed wirelessly via Zigbee2MQTT OTA using the `.zigbee` file.)*
+2. **Pairing:** Press any button **5 times quickly**, then **press and hold on the 6th press for ~2 seconds** until the LEDs flash steadily to join Zigbee2MQTT (recognized as **`TS0046-z-SlD`**).
+3. **Configure Button Actions:**
+   * Press any button **4 times quickly** to wake the sleepy device for 20 seconds.
+   * In Z2M **Exposes**, set **`Switch type`** on Endpoints `1`–`6` to **`multifunction`** (enables `single`, `double`, `triple`, `hold`, and `release`).
+
+
+
 # <a id="Top">LoraTap Wireless switch Zigbee with custom firmware</a>
 
 <img src="doc/images/LoraTap_TS004x.jpg"/>
