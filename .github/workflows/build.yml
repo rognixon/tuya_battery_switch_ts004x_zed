@@ -18,6 +18,7 @@ jobs:
 
       - name: Link Telink TC32 toolchain & compile Model 6
         run: |
+          apt-get update && apt-get install -y python3
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           GCC_PATH=$(which tc32-elf-gcc || find / -name tc32-elf-gcc 2>/dev/null | head -n 1)
           mkdir -p /opt/tc32
