@@ -11,14 +11,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Install dependencies and Telink TC32 toolchain
+      - name: Install Telink TC32 toolchain
         run: |
-          sudo apt-get update
-          sudo apt-get install -y make python3 wget bzip2
-          HOST="shyboy.oss-cn-shenzhen"
-          FILE="readonly/tc32_gcc_v2.0.tar.bz2"
-          wget -q "https://${HOST}://{FILE}"
+          mkdir -p out
+          wget -q https://github.com
           sudo tar -xjf tc32_gcc_v2.0.tar.bz2 -C /opt/
 
       - name: Compile Model 6 firmware
